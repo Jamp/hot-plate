@@ -12,7 +12,7 @@
 #define ITEM_MAX 8
 
 int lines[3] = {5, 3, 2};
-int interlines[3] = {14, 22, 40};
+int interlines[3] = {8, 16, 48};
 int maxCharacters[3] = {21, 10, 6};
 
 struct Text {
@@ -37,8 +37,8 @@ void putText(const Text& item) {
     x = (SCREEN_WIDTH - (int16_t)(strlen(item.text) * (SCREEN_WIDTH / maxCharacters[item.textSize - 1]))) / 2;
   } else if (item.x == TEXT_LEFT) {
     x = 0;
-  } else if (x == TEXT_RIGHT) {
-    x = SCREEN_WIDTH - (int16_t)(strlen(item.text) * maxCharacters[item.textSize - 1]);
+  } else if (item.x == TEXT_RIGHT) {
+    x = SCREEN_WIDTH - (strlen(item.text) * (uint16_t)(SCREEN_WIDTH /maxCharacters[item.textSize - 1]));
   } else {
     x = item.x;
   }
@@ -57,17 +57,18 @@ void putText(const Text& item) {
   oled.setTextSize(item.textSize);
   oled.setCursor(x, y);
   oled.print(item.text);
+  // oled.print(x);
 }
 
 
 void screenPrint(const char text[], int16_t x, int16_t y, uint8_t textSize = 1) {    
   if (itemCount < ITEM_MAX) {
-      itemList[itemCount].text = text;
-      itemList[itemCount].x = x;
-      itemList[itemCount].y = y;
-      itemList[itemCount].textSize = textSize;
+    itemList[itemCount].text = text;
+    itemList[itemCount].x = x;
+    itemList[itemCount].y = y;
+    itemList[itemCount].textSize = textSize;
 
-      itemCount++;
+    itemCount++;
   }
 }
 
@@ -77,14 +78,9 @@ void screenShow() {
 
   for (int i = 0; i < itemCount; i++) {
     putText(itemList[i]);
-
-    free(const_cast<char*>(itemList[i].text));  // Liberar la memoria de la cadena duplicada
-    itemList[i].text = nullptr;  // Restablecer el campo text
-    itemList[i].x = 0;  // Restablecer otros campos según sea necesario
-    itemList[i].y = 0;
-    itemList[i].textSize = 0;
   }
 
+  memset(itemList, 0, itemCount);
   itemCount = 0;
 
   oled.display();
@@ -94,7 +90,7 @@ void screenShow() {
 void screenInit() {
   // Mostrar para depurar por si no funcionó la pantalla
   if (!oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.begin(F("La pantalla OLED falló"));
+    Serial.println("La pantalla OLED falló");
 
     while (true);
   }

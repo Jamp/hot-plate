@@ -9,7 +9,7 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-#define ITEM_MAX 8
+#define ITEM_MAX 10
 
 int lines[3] = {5, 3, 2};
 int interlines[3] = {8, 16, 48};

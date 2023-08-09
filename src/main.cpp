@@ -6,10 +6,20 @@
 
 // SSR
 #define PIN_SSR 9
+
 // Termistor
 #define PIN_NTC A0
 
-int pwm = 255;  // 30%
+// Buzzer
+#define PIN_BUZZER 6
+
+// Buttons
+#define BUTTON_LEFT 9
+#define BUTTON_RIGHT 10
+#define BUTTON_A 11
+#define BUTTON_B 12
+
+char ssrState[] = "OFF";
 
 void mainMenu() {
   // Seleccione Modo
@@ -27,11 +37,14 @@ void setup() {
   Serial.begin(9600);
   pinMode(PIN_SSR, OUTPUT);
 
-  // Iniciando pantalla
+  pinMode(PIN_BUZZER, OUTPUT);
+  digitalWrite(PIN_BUZZER, LOW);
+
   Serial.println("Iniciando...");
   screenInit();
 
-  delay(2000);
+  tone(PIN_BUZZER, 1800, 500);
+  delay(1000);
 }
 
 int secs = 0;
@@ -51,47 +64,37 @@ void loop() {
   Serial.print("T: ");
   Serial.println(temp);
 
+  // Formatear el valor float como cadena
+  char buffer[10];  // Ajusta el tamaño del búfer según tus necesidades
+  dtostrf(temp, 4, 2, buffer);  // Formatear el valor con 4 dígitos en total y 2 decimales
+
+  // Construir la cadena completa
+  char fullText[20];  // Ajusta el tamaño del búfer según tus necesidades
+  snprintf(fullText, sizeof(fullText), "T: %s'C", buffer);
+
   screenPrint(("T: " + String(temp, 2) + "'C").c_str(), TEXT_LEFT, TEXT_TOP);
+  screenPrint(fullText, TEXT_LEFT, TEXT_TOP);
 
-  // oled.setCursor(0, 0);
-  // oled.print("T: " + String(temp, 2) + "'C");
-  // oled.setCursor(30, 0);
-  // oled.print(temp, 2);
-  // oled.setCursor(85, 0);
-  // oled.print("'C");
-  
-  // oled.setCursor(0, verticalLine * 1);
-  // oled.print("PWM");
-  // oled.setCursor(50, verticalLine * 1);
-  // oled.print(pwm);
+  if (strcmp(ssrState, "OFF") == 0) {
+    strcpy(ssrState, " ON");
+  } else {
+    strcpy(ssrState, "OFF");
+  }
 
-  // oled.setCursor(0, verticalLine * 2);
-  // oled.print("Time:");
-  // oled.setCursor(60, verticalLine * 2);
-  // oled.print(secs);
+  char ssrDisplay[20]; // Ajusta el tamaño según tus necesidades
+  snprintf(ssrDisplay, sizeof(ssrDisplay), "SSR:%s", ssrState);
+  screenPrint(ssrDisplay, TEXT_RIGHT, TEXT_TOP);
 
-  // oled.setCursor(0, 0);
-  // oled.print("Temp:");
-  // oled.setCursor(0, 20);
-  // oled.print(temp);
-  
-  // analogWrite(PIN_SSR, pwm);
-  digitalWrite(PIN_SSR, LOW);
+  screenPrint("MODO X", TEXT_CENTER, TEXT_MIDDLE, 2);
+  screenPrint("Corriendo prueba", TEXT_CENTER, 42);
 
-  // if (temp > 210) {
-  //   digitalWrite(PIN_SSR, LOW);
-  // } else {
-  //   secs++;
-  //   digitalWrite(PIN_SSR, HIGH);
-  // }
+  screenPrint("<", TEXT_LEFT, TEXT_MIDDLE, 2);
+  screenPrint(">", TEXT_RIGHT, TEXT_MIDDLE, 2);
+
+  screenPrint("Cancelar", TEXT_LEFT, TEXT_BOTTOM);
+  screenPrint("Aceptar", TEXT_RIGHT, TEXT_BOTTOM);
+
+  screenShow();
 
   delay(1000);
 }
-
-// 40°C 
-// 50°C 166947 Ohms
-// 60°C 107563 Ohms
-// 90°C 480
-// 100°C 48615 Ohms
-// 110°C 48566O
-

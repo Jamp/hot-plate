@@ -61,7 +61,7 @@ void putText(const Text& item) {
 }
 
 
-void screenPrint(const char text[], int16_t x, int16_t y, uint8_t textSize = 1) {    
+void oledPrint(const char text[], int16_t x, int16_t y, uint8_t textSize = 1) {    
   if (itemCount < ITEM_MAX) {
     itemList[itemCount].text = text;
     itemList[itemCount].x = x;
@@ -73,7 +73,7 @@ void screenPrint(const char text[], int16_t x, int16_t y, uint8_t textSize = 1) 
 }
 
 
-void screenShow() {
+void oledShow() {
   oled.clearDisplay();
 
   for (int i = 0; i < itemCount; i++) {
@@ -87,7 +87,7 @@ void screenShow() {
 }
 
 
-void screenInit() {
+void oledInit() {
   // Mostrar para depurar por si no funcionó la pantalla
   if (!oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println("La pantalla OLED falló");
@@ -101,6 +101,6 @@ void screenInit() {
   // Usamos el color blanco por defecto
   oled.setTextColor(WHITE);
 
-  screenPrint("Iniciando...", TEXT_CENTER, TEXT_CENTER);
-  screenShow();
+  oledPrint("Iniciando...", TEXT_CENTER, TEXT_CENTER);
+  oledShow();
 }

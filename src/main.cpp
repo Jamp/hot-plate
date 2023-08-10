@@ -1,53 +1,70 @@
 #include <Arduino.h>
 
-#include <modules/text_alignment.h>
-#include <modules/screen.h>
 #include <modules/thermistor.h>
+#include <modules/screen.h>
+#include <modules/buzzer.h>
 
-// SSR
-#define PIN_SSR 9
+#define MAX_STATE 3
+#define MAX_TEMPERATURE 200.0
 
 // Termistor
 #define PIN_NTC A0
+
+// SSR
+#define PIN_SSR 5
 
 // Buzzer
 #define PIN_BUZZER 6
 
 // Buttons
-#define BUTTON_LEFT 9
-#define BUTTON_RIGHT 10
-#define BUTTON_A 11
-#define BUTTON_B 12
+#define BUTTON_MINUS 9
+#define BUTTON_PLUS 10
+#define BUTTON_LEFT 11
+#define BUTTON_RIGHT 12
 
+// Seleccione Modo
+// Modo Temperatura Constante (mainState = 1)
+// Modo Soldadura 138°C (mainState = 2)
+// Modo Soldadura 183°C (mainState = 3)
+// Modo Test
+int8_t mainState = 1;
+const char* modeOptions[] = {
+    "Temperatura Fija",
+    "Soldadura 138'C",
+    "Soldadura 183'C"
+};
+
+uint8_t secs = 0;
 char ssrState[] = "OFF";
 
-void mainMenu() {
-  // Seleccione Modo
-  // Modo Temperatura Constante
-  // - 40°C
-  // - 60°C
-  // - 80°C
-  // - 100°C
-  // Modo Soldadura 138°C
-  // Modo Soldadura 183°C
-  // Modo Test
-}
+float temperatureFix = 40;
+const float temperatureAvailable[5] = {
+  40.0,
+  60.0,
+  80.0,
+  100.0,
+  200.0
+};
+
+
+char a[] = "NULL";
 
 void setup() {
   Serial.begin(9600);
   pinMode(PIN_SSR, OUTPUT);
 
-  pinMode(PIN_BUZZER, OUTPUT);
-  digitalWrite(PIN_BUZZER, LOW);
+  pinMode(BUTTON_MINUS, INPUT_PULLUP);
+  pinMode(BUTTON_PLUS, INPUT_PULLUP);
+  pinMode(BUTTON_LEFT, INPUT_PULLUP);
+  pinMode(BUTTON_RIGHT, INPUT_PULLUP);
 
   Serial.println("Iniciando...");
   screenInit();
 
-  tone(PIN_BUZZER, 1800, 500);
+  buzzerInit(PIN_BUZZER);
+
   delay(1000);
 }
-
-int secs = 0;
 
 void loop() {
   int samples = 50;
@@ -59,42 +76,49 @@ void loop() {
   }
 
   // float temp = calculateTemperature(PIN_NTC);
-  float temp = average / samples;
+  float temperature = average / samples;
 
   Serial.print("T: ");
-  Serial.println(temp);
+  Serial.println(temperature);
 
-  // Formatear el valor float como cadena
-  char buffer[10];  // Ajusta el tamaño del búfer según tus necesidades
-  dtostrf(temp, 4, 2, buffer);  // Formatear el valor con 4 dígitos en total y 2 decimales
+  Serial.println("BUTTONS");
+  Serial.println(digitalRead(BUTTON_MINUS));
+  Serial.println(digitalRead(BUTTON_PLUS));
+  Serial.println(digitalRead(BUTTON_LEFT));
+  Serial.println(digitalRead(BUTTON_RIGHT));
 
-  // Construir la cadena completa
-  char fullText[20];  // Ajusta el tamaño del búfer según tus necesidades
-  snprintf(fullText, sizeof(fullText), "T: %s'C", buffer);
-
-  screenPrint(("T: " + String(temp, 2) + "'C").c_str(), TEXT_LEFT, TEXT_TOP);
-  screenPrint(fullText, TEXT_LEFT, TEXT_TOP);
-
-  if (strcmp(ssrState, "OFF") == 0) {
-    strcpy(ssrState, " ON");
-  } else {
-    strcpy(ssrState, "OFF");
+  if (!digitalRead(BUTTON_MINUS)) {
+    moveSound();
+    strcpy(a, "<");
+  } else if (!digitalRead(BUTTON_PLUS)) {
+    moveSound();
+    strcpy(a, ">");
+  } else if (!digitalRead(BUTTON_LEFT)) {
+    selectSound();
+    strcpy(a, "+");
+    mainState++;
+  } else if (!digitalRead(BUTTON_RIGHT)) {
+    finishSound();
+    strcpy(a, "-");
+    mainState--;
   }
 
-  char ssrDisplay[20]; // Ajusta el tamaño según tus necesidades
-  snprintf(ssrDisplay, sizeof(ssrDisplay), "SSR:%s", ssrState);
-  screenPrint(ssrDisplay, TEXT_RIGHT, TEXT_TOP);
+  if (mainState < 1) {
+    mainState = MAX_STATE;
+  } else if (mainState > MAX_STATE) {
+    mainState = 1;
+  }
 
-  screenPrint("MODO X", TEXT_CENTER, TEXT_MIDDLE, 2);
-  screenPrint("Corriendo prueba", TEXT_CENTER, 42);
+  gui(
+    temperature,
+    ssrState,
+    (uint8_t)mainState,
+    modeOptions[mainState - 1],
+    "<",
+    ">",
+    nullptr,
+    "Aceptar"
+  );
 
-  screenPrint("<", TEXT_LEFT, TEXT_MIDDLE, 2);
-  screenPrint(">", TEXT_RIGHT, TEXT_MIDDLE, 2);
-
-  screenPrint("Cancelar", TEXT_LEFT, TEXT_BOTTOM);
-  screenPrint("Aceptar", TEXT_RIGHT, TEXT_BOTTOM);
-
-  screenShow();
-
-  delay(1000);
+  delay(10);
 }

@@ -5,7 +5,7 @@
 #include <modules/buzzer.h>
 
 #define MAX_STATE 3
-#define MAX_TEMPERATURE 200.0
+#define MAX_TEMPERATURE 4
 
 // Termistor
 #define PIN_NTC A0
@@ -22,6 +22,19 @@
 #define BUTTON_LEFT 11
 #define BUTTON_RIGHT 12
 
+const float hysteresis = 2.0;
+const int samples = 50;
+
+// Modes
+// Main Menu 0
+// Set Heat 1
+// Running Heat 2
+// Waiting for Solder 138'C 3
+// Running Solder 138'C 4
+// Waiting for Solder 183'C 5
+// Running Solder 183'C 6
+int8_t mode = 0;
+
 // Seleccione Modo
 // Modo Temperatura Constante (mainState = 1)
 // Modo Soldadura 138°C (mainState = 2)
@@ -37,7 +50,7 @@ const char* modeOptions[] = {
 uint8_t secs = 0;
 char ssrState[] = "OFF";
 
-float temperatureFix = 40;
+int temperatureSet = 0;
 const float temperatureAvailable[5] = {
   40.0,
   60.0,
@@ -47,7 +60,12 @@ const float temperatureAvailable[5] = {
 };
 
 
-char a[] = "NULL";
+void goMain() {
+  mode = 0;
+  mainState = 1;
+  temperatureSet = 0;
+}
+
 
 void setup() {
   Serial.begin(9600);
@@ -66,7 +84,8 @@ void setup() {
   delay(1000);
 }
 
-void loop() {
+
+void mainMenu(uint8_t pin) {
   int samples = 50;
   float average = 0.0;
 
@@ -81,26 +100,18 @@ void loop() {
   Serial.print("T: ");
   Serial.println(temperature);
 
-  Serial.println("BUTTONS");
-  Serial.println(digitalRead(BUTTON_MINUS));
-  Serial.println(digitalRead(BUTTON_PLUS));
-  Serial.println(digitalRead(BUTTON_LEFT));
-  Serial.println(digitalRead(BUTTON_RIGHT));
-
+  // Move in menu
   if (!digitalRead(BUTTON_MINUS)) {
     moveSound();
-    strcpy(a, "<");
+    mainState--;
   } else if (!digitalRead(BUTTON_PLUS)) {
     moveSound();
-    strcpy(a, ">");
-  } else if (!digitalRead(BUTTON_LEFT)) {
-    selectSound();
-    strcpy(a, "+");
     mainState++;
+  } else if (!digitalRead(BUTTON_LEFT)) {
+    // selectSound();
   } else if (!digitalRead(BUTTON_RIGHT)) {
+    mode = mainState;
     finishSound();
-    strcpy(a, "-");
-    mainState--;
   }
 
   if (mainState < 1) {
@@ -121,4 +132,118 @@ void loop() {
   );
 
   delay(10);
+}  // mainMenu
+
+
+void heat(uint8_t pinThermistor, uint8_t pinSsr, float fixedTemperature) {
+  const float hysteresis = 2.0;
+  const int samples = 50;
+  float average = 0.0;
+
+  for (int i = 0; i < samples; i++) {
+    average += thermistorTemperature(pinThermistor);
+    delay(1);
+  }
+
+  float temperature = average / samples;
+
+  // Control de la placa calefactora
+  if (temperature < fixedTemperature - hysteresis) {
+    digitalWrite(pinSsr, HIGH);  // Enciende la placa calefactora
+  } else if (temperature > fixedTemperature + hysteresis) {
+    digitalWrite(pinSsr, LOW);   // Apaga la placa calefactora
+  }
+
+  char buffer[10];
+  char subTitle[20];
+  dtostrf(fixedTemperature, 4, 2, buffer);
+  snprintf(subTitle, sizeof(subTitle), "Fijo a %s'C", buffer);
+
+  if (!digitalRead(BUTTON_LEFT)) {
+    goMain();
+    finishSound();
+  } else if (!digitalRead(BUTTON_RIGHT)) {
+    goMain();
+    finishSound();
+  }
+
+  gui(
+    temperature,
+    ssrState,
+    (uint8_t)mainState,
+    subTitle,
+    nullptr,
+    nullptr,
+    "Cancelar",
+    "Cancelar"
+  );
+
+  delay(100);
+}  // heat
+
+
+void setHeat(uint8_t pinThermistor, uint8_t pinSsr) {
+  const int samples = 50;
+  float average = 0.0;
+
+  for (int i = 0; i < samples; i++) {
+    average += thermistorTemperature(pinThermistor);
+    delay(1);
+  }
+
+  float temperature = average / samples;
+
+  char buffer[10];
+  char subTitle[20];
+  dtostrf(temperatureAvailable[temperatureSet], 4, 2, buffer);
+  snprintf(subTitle, sizeof(subTitle), "Fijar a %s'C", buffer);
+
+  // Move on temperature
+  if (!digitalRead(BUTTON_MINUS)) {
+    moveSound();
+    temperatureSet--;
+  } else if (!digitalRead(BUTTON_PLUS)) {
+    moveSound();
+    temperatureSet++;
+  } else if (!digitalRead(BUTTON_LEFT)) {
+    goMain();
+    selectSound();
+  // } else if (!digitalRead(BUTTON_RIGHT)) {
+  //   finishSound();
+  }
+
+  if (temperatureSet < 0) {
+    temperatureSet = MAX_TEMPERATURE;
+  } else if (temperatureSet > MAX_TEMPERATURE) {
+    temperatureSet = 0;
+  }
+
+  gui(
+    temperature,
+    ssrState,
+    (uint8_t)mainState,
+    subTitle,
+    "-",
+    "+",
+    "Cancelar",
+    "Iniciar"
+  );
+
+  delay(100);
+}  // setHeat
+
+void loop() {
+  switch (mode) {
+    case 1:
+      setHeat(PIN_NTC, PIN_SSR);
+      break;
+
+    case 2:
+      heat(PIN_NTC, PIN_SSR, temperatureAvailable[temperatureSet]);
+      break;
+    
+    default:
+      mainMenu(PIN_NTC);
+      break;
+  }
 }

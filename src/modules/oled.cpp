@@ -9,7 +9,7 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-#define ITEM_MAX 10
+#define ITEM_MAX 8
 
 int lines[3] = {5, 3, 2};
 int interlines[3] = {8, 16, 48};
@@ -57,7 +57,6 @@ void putText(const Text& item) {
   oled.setTextSize(item.textSize);
   oled.setCursor(x, y);
   oled.print(item.text);
-  // oled.print(x);
 }
 
 
@@ -76,11 +75,11 @@ void oledPrint(const char text[], int16_t x, int16_t y, uint8_t textSize = 1) {
 void oledShow() {
   oled.clearDisplay();
 
-  for (int i = 0; i < itemCount; i++) {
+  for (int i = 0; i < ITEM_MAX; i++) {
     putText(itemList[i]);
   }
 
-  memset(itemList, 0, itemCount);
+  memset(itemList, 0, ITEM_MAX);
   itemCount = 0;
 
   oled.display();
@@ -90,7 +89,7 @@ void oledShow() {
 void oledInit() {
   // Mostrar para depurar por si no funcionó la pantalla
   if (!oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println("La pantalla OLED falló");
+    Serial.println(F("La pantalla OLED falló"));
 
     while (true);
   }

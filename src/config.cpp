@@ -1,0 +1,14 @@
+const float HYSTERESIS = 2.0;
+const float SAFETY_TEMPERATURE = 40.0;
+
+const float PREHEAT_TEMPERATURE_138 = 120.0;
+const float SOAK_TEMPERATURE_138 = 140.0;
+const float REFLOW_TEMPERATURE_138 = 180.0;
+
+const float PREHEAT_TEMPERATURE_183 = 150.0;
+const float SOAK_TEMPERATURE_183 = 180.0;
+const float REFLOW_TEMPERATURE_183 = 200.0;
+
+const int PREHEAT_TIME = 150.0;
+const int SOAK_TIME = 180.0;
+const int REFLOW_TIME = 200.0;
